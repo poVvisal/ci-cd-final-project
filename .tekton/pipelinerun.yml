@@ -11,8 +11,8 @@ spec:
         claimName: oc-lab-pvc
   params:
     - name: repo-url
-      value: "https://github.com/poVvisal/ci-cd-final-project.git"   
+      value: "https://github.com/poVvisal/ci-cd-final-project.git"
     - name: app-name
-      value: "my-app"
+      value: "oc-lab-vpc"
     - name: build-image
       value: "image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/my-app:latest"

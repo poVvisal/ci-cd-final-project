@@ -29,6 +29,9 @@ spec:
       params:
         - name: url
           value: $(params.repo-url)
+        - name: revision
+          type: string
+          default: ""
       workspaces:
         - name: output
           workspace: output
@@ -49,19 +52,21 @@ spec:
         name: nose
       params:
         - name: args
-          value: "-v --with-xunit"
+          value: "-v"
       workspaces:
         - name: source
           workspace: output
       runAfter:
         - flake8-linting
-    
     - name: buildah
       taskRef:
         name: buildah
       params:
         - name: IMAGE
           value: $(params.build-image)
+        - name: STORAGE_DRIVER
+          type: string
+          default: "vfs"  
       workspaces:
         - name: source
           workspace: output
@@ -74,6 +79,21 @@ spec:
       params:
         - name: SCRIPT
           value: |
-            oc create deployment $(params.app-name) --image=$(params.build-image) --dry-run=client -o yaml | oc apply -f -
+            #!/bin/bash
+            echo "Deploying application: $(params.app-name)"
+            echo "Using image: $(params.build-image)"
+            
+            # Check if deployment exists, create or update
+            if oc get deployment $(params.app-name) &>/dev/null; then
+              echo "Updating existing deployment..."
+              oc set image deployment/$(params.app-name) $(params.app-name)=$(params.build-image) --record
+              oc rollout status deployment/$(params.app-name)
+            else
+              echo "Creating new deployment..."
+              oc create deployment $(params.app-name) --image=$(params.build-image) --dry-run=client -o yaml | oc apply -f -
+              oc expose deployment $(params.app-name) --port=5000 --type=ClusterIP 2>/dev/null || true
+            fi
+            
+            echo "Deployment completed successfully"
       runAfter:
         - buildah
